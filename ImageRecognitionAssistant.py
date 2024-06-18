@@ -441,7 +441,7 @@ def show_payment_page():
             else:
                 st.error("請填寫所有信用卡信息")
         
-       if cancel_payment:
+        if cancel_payment:
             st.session_state.show_payment_page = False
             st.experimental_rerun()
 
