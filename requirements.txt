@@ -3,5 +3,5 @@ python-dotenv
 google-cloud-vision
 google-auth
 Pillow
-openai
+openai ; python_version >= "3.8"
 requests
