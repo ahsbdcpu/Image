@@ -408,13 +408,16 @@ def load_users():
         st.session_state.users = {}
 
 def save_users():
-    pass
+    with open(USER_DATA_FILE, 'w') as file:
+        json.dump(st.session_state.users, file)
+
+def get_image_content(image):
+    with io.BytesIO() as output:
+        image.save(output, format="JPEG")
+        content = output.getvalue()
+    return content
 
 def show_payment_page():
-    if st.session_state.get('subscription_status'):
-        show_success_page()
-        return
-    
     st.title("訂閱付款")
     st.write("請選擇訂閱計劃並完成付款以獲得無限次使用次數。")
     
@@ -424,40 +427,20 @@ def show_payment_page():
         card_expiry = st.text_input("到期日 (MM/YY)")
         card_cvc = st.text_input("CVC")
         
-        submit_payment = st.form_submit_button("付款")
-        cancel_payment = st.form_submit_button("取消付款")
-
-        if submit_payment:
+        if st.form_submit_button("付款"):
             if card_number and card_expiry and card_cvc:
                 st.session_state.subscription_status = True
                 st.session_state.users[st.session_state.current_user]['subscription_status'] = True
                 save_users()
-                st.experimental_rerun()  # 重新加載頁面以顯示成功頁面
+                st.success("訂閱成功！請繼續體驗圖片辨識功能!")
+                st.session_state.show_payment_page = False
+                st.experimental_rerun()
             else:
                 st.error("請填寫所有信用卡信息")
         
-        if cancel_payment:
+        if st.form_submit_button("取消付款"):
             st.session_state.show_payment_page = False
             st.experimental_rerun()
-
-def show_success_page():
-    st.title("訂閱成功")
-    st.write("訂閱成功！請繼續體驗無限制的辨識功能與更強大的模型功能!")
-
-def main():
-    if 'subscription_status' not in st.session_state:
-        st.session_state.subscription_status = False
-
-    if 'users' not in st.session_state:
-        st.session_state.users = {}
-
-    if 'current_user' not in st.session_state:
-        st.session_state.current_user = 'default_user'  # 假設有默認用戶
-    
-    if st.session_state.get('show_payment_page', True):
-        show_payment_page()
-    else:
-        st.write("歡迎使用圖片辨識功能")
 
 if __name__ == "__main__":
     main()
