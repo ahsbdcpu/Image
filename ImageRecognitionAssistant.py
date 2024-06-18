@@ -408,16 +408,13 @@ def load_users():
         st.session_state.users = {}
 
 def save_users():
-    with open(USER_DATA_FILE, 'w') as file:
-        json.dump(st.session_state.users, file)
-
-def get_image_content(image):
-    with io.BytesIO() as output:
-        image.save(output, format="JPEG")
-        content = output.getvalue()
-    return content
+    pass
 
 def show_payment_page():
+    if st.session_state.get('subscription_status'):
+        show_success_page()
+        return
+    
     st.title("訂閱付款")
     st.write("請選擇訂閱計劃並完成付款以獲得無限次使用次數。")
     
@@ -435,15 +432,32 @@ def show_payment_page():
                 st.session_state.subscription_status = True
                 st.session_state.users[st.session_state.current_user]['subscription_status'] = True
                 save_users()
-                st.success("訂閱成功！請繼續體驗圖片辨識功能!")
-                st.session_state.show_payment_page = False
-                st.experimental_rerun()
+                st.experimental_rerun()  # 重新加載頁面以顯示成功頁面
             else:
                 st.error("請填寫所有信用卡信息")
         
         if cancel_payment:
             st.session_state.show_payment_page = False
             st.experimental_rerun()
+
+def show_success_page():
+    st.title("訂閱成功")
+    st.write("訂閱成功！請繼續體驗無限制的辨識功能與更強大的模型功能!")
+
+def main():
+    if 'subscription_status' not in st.session_state:
+        st.session_state.subscription_status = False
+
+    if 'users' not in st.session_state:
+        st.session_state.users = {}
+
+    if 'current_user' not in st.session_state:
+        st.session_state.current_user = 'default_user'  # 假設有默認用戶
+    
+    if st.session_state.get('show_payment_page', True):
+        show_payment_page()
+    else:
+        st.write("歡迎使用圖片辨識功能")
 
 if __name__ == "__main__":
     main()
