@@ -11,12 +11,11 @@ import logging
 from datetime import datetime
 import os
 import openai
-
 # Set up logging
 logging.basicConfig(level=logging.INFO)
 
-client = OpenAI()
 openai.api_key = os.getenv("OPENAI_API_KEY")
+client = OpenAI()
 
 # Initialize session state
 if 'history' not in st.session_state:
