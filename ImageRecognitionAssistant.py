@@ -450,5 +450,18 @@ def show_payment_page():
 def show_success_page():
     st.title("訂閱成功")
     st.write("訂閱成功！請繼續體驗無限制的辨識功能與更強大的模型功能!")
+    
+    # 插入JavaScript來實現3秒後自動跳轉
+    st.markdown("""
+        <script>
+        setTimeout(function() {
+            window.location.href = "/";
+        }, 3000);
+        </script>
+    """, unsafe_allow_html=True)
+
+def show_success_page():
+    st.title("訂閱成功")
+    st.write("訂閱成功！請繼續體驗無限制的辨識功能與更強大的模型功能!")
 if __name__ == "__main__":
     main()
