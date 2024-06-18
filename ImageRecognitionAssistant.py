@@ -226,19 +226,17 @@ def web_detection(image):
         content = get_image_content(image)
         image_vision = vision.Image(content=content)
         response = client.web_detection(image=image_vision)
-        web_detection = response.web_detection
+        annotations = response.web_detection
+
+        draw = ImageDraw.Draw(image)
+        font = ImageFont.load_default()
 
         result = "網頁辨識結果：<br>"
-        if web_detection.web_entities:
-            result += "網頁實體：<br>"
-            for entity in web_detection.web_entities:
-                result += f"{entity.description}: {entity.score*100:.2f}%<br>"
-                logging.info(f"實體：{entity.description}，信心度：{entity.score*100:.2f}%")
-
-        if web_detection.full_matching_images:
-            result += "<br>完全匹配的圖片：<br>"
-            for image in web_detection.full_matching_images:
-                result += f"URL: {image.url}<br>"
+        if annotations.pages_with_matching_images:
+            result += "匹配的網頁：<br>"
+            for page in annotations.pages_with_matching_images:
+                result += f"{page.url}<br>"
+                logging.info(f"匹配的網頁：{page.url}")
 
         return result, image
 
@@ -269,9 +267,10 @@ def object_detection(image):
         for object_ in objects:
             result += f"{object_.name}: {object_.score*100:.2f}%<br>"
             logging.info(f"物體：{object_.name}，信心度：{object_.score*100:.2f}%")
+
             box = [(vertex.x * image.width, vertex.y * image.height) for vertex in object_.bounding_poly.normalized_vertices]
-            draw.polygon(box, outline="red")
-            draw.text(box[0], object_.name, fill="red", font=font)
+            draw.polygon(box, outline='red')
+            draw.text(box[0], object_.name, fill='red', font=font)
 
         return result, image
 
@@ -279,6 +278,13 @@ def object_detection(image):
         logging.error(f"物體辨識失敗：{str(e)}")
         return f"物體辨識失敗：{str(e)}", image
 
+def ocr_detection(image):
+    try:
+        def get_image_content(image):
+            buffered = io.BytesIO()
+            image.save(buffered, format="JPEG")
+            content = buffered.getvalue()
+            return content
 def ocr_detection(image):
     try:
         def get_image_content(image):
