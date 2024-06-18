@@ -353,7 +353,7 @@ def explicit_content_detection(image):
             content = buffered.getvalue()
             return content
 
-        logging.info("開始不當內容辨識")
+        logging.info("Starting explicit content detection")
         credentials = service_account.Credentials.from_service_account_file(SERVICE_ACCOUNT_FILE)
         client = vision.ImageAnnotatorClient(credentials=credentials)
         content = get_image_content(image)
@@ -362,15 +362,17 @@ def explicit_content_detection(image):
         safe_search = response.safe_search_annotation
 
         result = "不當內容辨識結果：<br>"
-        result += f"成人內容：{safe_search.adult}<br>"
-        result += f"情色內容：{safe_search.medical}<br>"
-        result += f"暴力內容：{safe_search.violence}<br>"
-        result += f"令人反感的內容：{safe_search.racy}<br>"
+        result += f"成人內容 (Adult): {safe_search.adult.name}<br>"
+        result += f"情色內容 (Medical): {safe_search.medical.name}<br>"
+        result += f"暴力內容 (Violence): {safe_search.violence.name}<br>"
+        result += f"令人反感的內容 (Racy): {safe_search.racy.name}<br>"
+
+        logging.info("Explicit content detection completed successfully")
 
         return result, image
 
     except Exception as e:
-        logging.error(f"不當內容辨識失敗：{str(e)}")
+        logging.error(f"Explicit content detection failed: {str(e)}")
         return f"不當內容辨識失敗：{str(e)}", image
 
 def generate_gpt_description(result, use_gpt4=False):
