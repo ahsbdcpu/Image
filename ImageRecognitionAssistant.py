@@ -453,17 +453,10 @@ def show_success_page():
     st.title("訂閱成功")
     st.write("訂閱成功！請繼續體驗無限制的辨識功能與更強大的模型功能!")
 
-    # 設置顯示成功頁面的開始時間
-    if 'success_start_time' not in st.session_state:
-        st.session_state.success_start_time = time.time()
-    
-    # 檢查是否已經顯示了3秒鐘
-    if time.time() - st.session_state.success_start_time > 3:
-        if st.button('返回辨識功能'):
-            st.query_params.update(page="recognition")
-            st.experimental_rerun()
-    else:
-        st.write("3秒後將顯示返回按鈕...")
+    # 顯示返回鍵
+    if st.button('返回辨識功能'):
+        st.query_params.update(page="recognition")
+        st.experimental_rerun()
 
 def show_recognition_page():
     st.title("圖片辨識")
