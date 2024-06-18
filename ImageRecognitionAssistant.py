@@ -16,6 +16,7 @@ logging.basicConfig(level=logging.INFO)
 
 # Initialize OpenAI API key
 openai.api_key = os.getenv("OPENAI_API_KEY")
+openai.api_base = ''
 
 # Initialize session state
 if 'history' not in st.session_state:
@@ -64,7 +65,7 @@ def show_main_page():
     else:
         st.sidebar.write(f"已使用 {st.session_state.usage_count} 次, 免費使用上限 {USAGE_LIMIT} 次")
 
-    if st.sidebar.button("返回主界面"):
+    if st.sidebar.button("返回主界面", key="back_to_main"):
         st.session_state.logged_in = False
         st.experimental_rerun()
         return
@@ -76,14 +77,14 @@ def show_main_page():
     st.sidebar.title("辨識歷史記錄")
     if st.session_state.history:
         for idx, entry in enumerate(st.session_state.history):
-            if st.sidebar.button(f"查看記錄 {idx + 1}"):
+            if st.sidebar.button(f"查看記錄 {idx + 1}", key=f"view_record_{idx}"):
                 st.sidebar.image(entry['image'], caption=f"記錄 {idx + 1}: {entry['result']}", use_column_width=True)
                 st.sidebar.write(entry['description'])
     else:
         st.sidebar.write("尚未有辨識記錄")
 
     if st.session_state.subscription_status:
-        if st.sidebar.button("取消訂閱"):
+        if st.sidebar.button("取消訂閱", key="cancel_subscription"):
             st.session_state.subscription_status = False
             st.session_state.users[st.session_state.current_user]['subscription_status'] = False
             save_users()
@@ -91,7 +92,7 @@ def show_main_page():
             st.experimental_rerun()
             return
     else:
-        if st.sidebar.button("訂閱"):
+        if st.sidebar.button("訂閱", key="subscribe"):
             st.session_state.show_payment_page = True
             st.experimental_rerun()
             return
@@ -101,22 +102,22 @@ def show_main_page():
     # Check usage limit
     if st.session_state.usage_count >= USAGE_LIMIT and not st.session_state.subscription_status:
         st.error("您已達到免費使用次數上限，請訂閱來繼續使用。")
-        if st.button("訂閱"):
+        if st.button("訂閱", key="subscribe_limited"):
             st.session_state.show_payment_page = True
             st.experimental_rerun()
         return
 
-    uploaded_file = st.file_uploader("選擇圖片...", type=["jpg", "jpeg", "png", "webp", "bmp"])
+    uploaded_file = st.file_uploader("選擇圖片...", type=["jpg", "jpeg", "png", "webp", "bmp"], key="file_uploader")
     if uploaded_file is not None:
         image = Image.open(uploaded_file)
         st.image(image, caption='上傳的圖片', use_column_width=True)
         st.write("")
 
         # Select detection type
-        detection_type = st.selectbox("選擇辨識類型", ["標籤辨識", "網頁辨識", "物體辨識", "OCR文字辨識", "Logo辨識", "不當內容辨識"])
+        detection_type = st.selectbox("選擇辨識類型", ["標籤辨識", "網頁辨識", "物體辨識", "OCR文字辨識", "Logo辨識", "不當內容辨識"], key="detection_type")
 
         # Generate response
-        if st.button("辨識圖片"):
+        if st.button("辨識圖片", key="detect_image"):
             with st.spinner("正在辨識..."):
                 if detection_type == "標籤辨識":
                     result, image_with_result = label_detection(image)
@@ -155,13 +156,13 @@ def show_main_page():
 
 def login_or_register():
     st.title("歡迎使用圖片辨識助手")
-    choice = st.sidebar.selectbox("選擇操作", ["登錄", "註冊"])
+    choice = st.sidebar.selectbox("選擇操作", ["登錄", "註冊"], key="login_or_register")
 
     if choice == "登錄":
         st.subheader("登錄")
-        username = st.text_input("用戶名")
-        password = st.text_input("密碼", type="password")
-        if st.button("登錄"):
+        username = st.text_input("用戶名", key="login_username")
+        password = st.text_input("密碼", type="password", key="login_password")
+        if st.button("登錄", key="login_button"):
             if username in st.session_state.users and st.session_state.users[username]['password'] == password:
                 st.success("登錄成功")
                 st.session_state.logged_in = True
@@ -175,7 +176,7 @@ def login_or_register():
         st.subheader("註冊")
         new_username = st.text_input("用戶名", key="new_username")
         new_password = st.text_input("密碼", type="password", key="new_password")
-        if st.button("註冊"):
+        if st.button("註冊", key="register_button"):
             if new_username in st.session_state.users:
                 st.error("用戶名已存在")
             else:
@@ -229,12 +230,17 @@ def web_detection(image):
         content = get_image_content(image)
         image_vision = vision.Image(content=content)
         response = client.web_detection(image=image_vision)
-        web_entities = response.web_detection.web_entities
+        annotations = response.web_detection
+
+        draw = ImageDraw.Draw(image)
+        font = ImageFont.load_default()
 
         result = "網頁辨識結果：<br>"
-        for entity in web_entities:
-            result += f"{entity.description}: {entity.score*100:.2f}%<br>"
-            logging.info(f"網頁實體：{entity.description}，信心度：{entity.score*100:.2f}%")
+        if annotations.pages_with_matching_images:
+            result += "匹配的網頁：<br>"
+            for page in annotations.pages_with_matching_images:
+                result += f"{page.url}<br>"
+                logging.info(f"匹配的網頁：{page.url}")
 
         return result, image
 
@@ -265,9 +271,10 @@ def object_detection(image):
         for object_ in objects:
             result += f"{object_.name}: {object_.score*100:.2f}%<br>"
             logging.info(f"物體：{object_.name}，信心度：{object_.score*100:.2f}%")
+
             box = [(vertex.x * image.width, vertex.y * image.height) for vertex in object_.bounding_poly.normalized_vertices]
-            draw.polygon(box, outline="red")
-            draw.text((box[0][0], box[0][1] - 10), object_.name, fill="red", font=font)
+            draw.polygon(box, outline='red')
+            draw.text(box[0], object_.name, fill='red', font=font)
 
         return result, image
 
@@ -283,7 +290,7 @@ def ocr_detection(image):
             content = buffered.getvalue()
             return content
 
-        logging.info("開始OCR辨識")
+        logging.info("開始OCR文字辨識")
         credentials = service_account.Credentials.from_service_account_file(SERVICE_ACCOUNT_FILE)
         client = vision.ImageAnnotatorClient(credentials=credentials)
         content = get_image_content(image)
@@ -298,14 +305,12 @@ def ocr_detection(image):
         for text in texts:
             result += f"{text.description}<br>"
             logging.info(f"OCR文字：{text.description}")
-            box = [(vertex.x, vertex.y) for vertex in text.bounding_poly.vertices]
-            draw.polygon(box, outline="red")
 
         return result, image
 
     except Exception as e:
-        logging.error(f"OCR辨識失敗：{str(e)}")
-        return f"OCR辨識失敗：{str(e)}", image
+        logging.error(f"OCR文字辨識失敗：{str(e)}")
+        return f"OCR文字辨識失敗：{str(e)}", image
 
 def logo_detection(image):
     try:
@@ -330,9 +335,6 @@ def logo_detection(image):
         for logo in logos:
             result += f"{logo.description}: {logo.score*100:.2f}%<br>"
             logging.info(f"Logo：{logo.description}，信心度：{logo.score*100:.2f}%")
-            box = [(vertex.x, vertex.y) for vertex in logo.bounding_poly.vertices]
-            draw.polygon(box, outline="red")
-            draw.text((box[0][0], box[0][1] - 10), logo.description, fill="red", font=font)
 
         return result, image
 
@@ -354,16 +356,17 @@ def explicit_content_detection(image):
         content = get_image_content(image)
         image_vision = vision.Image(content=content)
         response = client.safe_search_detection(image=image_vision)
-        safe_search = response.safe_search_annotation
+        safe = response.safe_search_annotation
+
+        draw = ImageDraw.Draw(image)
+        font = ImageFont.load_default()
 
         result = "不當內容辨識結果：<br>"
-        result += f"成人內容: {safe_search.adult.name}<br>"
-        result += f"暴力內容: {safe_search.violence.name}<br>"
-        result += f"醫療內容: {safe_search.medical.name}<br>"
-        result += f"毒品內容: {safe_search.drug.name}<br>"
-        result += f"暴力與血腥內容: {safe_search.violence.name}<br>"
-
-        logging.info(f"不當內容辨識結果：成人-{safe_search.adult.name}，暴力-{safe_search.violence.name}，醫療-{safe_search.medical.name}，毒品-{safe_search.drug.name}，暴力與血腥-{safe_search.violence.name}")
+        result += f"成人內容：{safe.adult}<br>"
+        result += f"暴力內容：{safe.violence}<br>"
+        result += f"醫療內容：{safe.medical}<br>"
+        result += f"情色內容：{safe.racy}<br>"
+        logging.info(f"不當內容：成人-{safe.adult}, 暴力-{safe.violence}, 醫療-{safe.medical}, 情色-{safe.racy}")
 
         return result, image
 
@@ -373,11 +376,18 @@ def explicit_content_detection(image):
 
 def generate_gpt_description(result, use_gpt4=False):
     try:
-        model = "gpt-4" if use_gpt4 else "gpt-3.5-turbo"
-        messages = [
-            {"role": "system", "content": "你是專業圖片描述生成助手,以繁體中文回答,請確實地描述圖片狀況,不要用記錄呈現的文字回答"},
-            {"role": "user", "content": f"根據以下辨識結果生成一段描述：{result}"}
-        ]
+        if use_gpt4:
+            model = "gpt-4o"
+            messages = [
+                {"role": "system", "content": "你是專業圖片描述生成助手,以繁體中文回答,請確實地描述圖片狀況,不要用記錄呈現的文字回答"},
+                {"role": "user", "content": f"根據以下辨識結果生成一段描述：{result}"}
+            ]
+        else:
+            model = "gpt-3.5-turbo"
+            messages = [
+                {"role": "system", "content": "你是專業圖片描述生成助手，以繁體中文回答，並且作簡短回覆就好，不要用記錄呈現的文字回答"},
+                {"role": "user", "content": f"根據以下辨識結果生成一段描述：{result}"}
+            ]
         
         logging.info(f"使用模型 {model} 生成描述")
         
@@ -386,11 +396,11 @@ def generate_gpt_description(result, use_gpt4=False):
             messages=messages,
             max_tokens=200
         )
-        return response['choices'][0]['message']['content']
+        return response.choices[0].message['content']
     except Exception as e:
         logging.error(f"生成描述錯誤: {str(e)}")
         return f"生成描述失敗: {str(e)}"
-
+    
 def load_users():
     try:
         with open(USER_DATA_FILE, 'r') as file:
