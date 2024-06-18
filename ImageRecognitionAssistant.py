@@ -285,13 +285,6 @@ def ocr_detection(image):
             image.save(buffered, format="JPEG")
             content = buffered.getvalue()
             return content
-def ocr_detection(image):
-    try:
-        def get_image_content(image):
-            buffered = io.BytesIO()
-            image.save(buffered, format="JPEG")
-            content = buffered.getvalue()
-            return content
 
         logging.info("開始OCR文字辨識")
         credentials = service_account.Credentials.from_service_account_file(SERVICE_ACCOUNT_FILE)
