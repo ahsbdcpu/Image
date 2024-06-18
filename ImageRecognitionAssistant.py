@@ -373,18 +373,11 @@ def explicit_content_detection(image):
 
 def generate_gpt_description(result, use_gpt4=False):
     try:
-        if use_gpt4:
-            model = "gpt-4o"
-            messages = [
-                {"role": "system", "content": "你是專業圖片描述生成助手,以繁體中文回答,請確實地描述圖片狀況,不要用記錄呈現的文字回答"},
-                {"role": "user", "content": f"根據以下辨識結果生成一段描述：{result}"}
-            ]
-        else:
-            model = "gpt-3.5-turbo"
-            messages = [
-                {"role": "system", "content": "你是專業圖片描述生成助手，以繁體中文回答，並且作簡短回覆就好，不要用記錄呈現的文字回答"},
-                {"role": "user", "content": f"根據以下辨識結果生成一段描述：{result}"}
-            ]
+        model = "gpt-4" if use_gpt4 else "gpt-3.5-turbo"
+        messages = [
+            {"role": "system", "content": "你是專業圖片描述生成助手,以繁體中文回答,請確實地描述圖片狀況,不要用記錄呈現的文字回答"},
+            {"role": "user", "content": f"根據以下辨識結果生成一段描述：{result}"}
+        ]
         
         logging.info(f"使用模型 {model} 生成描述")
         
@@ -393,10 +386,12 @@ def generate_gpt_description(result, use_gpt4=False):
             messages=messages,
             max_tokens=200
         )
-        return response.choices[0].message['content']
+        return response['choices'][0]['message']['content']
     except Exception as e:
         logging.error(f"生成描述錯誤: {str(e)}")
         return f"生成描述失敗: {str(e)}"
+
+    
 def load_users():
     try:
         with open(USER_DATA_FILE, 'r') as file:
