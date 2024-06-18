@@ -3,14 +3,10 @@ from google.cloud import vision
 from google.oauth2 import service_account
 from PIL import Image, ImageDraw, ImageFont
 import io
-import time
 import json
 import openai
-import requests
-import base64
-import logging
-from datetime import datetime
 import os
+import logging
 
 # Set up logging
 logging.basicConfig(level=logging.INFO)
@@ -230,17 +226,19 @@ def web_detection(image):
         content = get_image_content(image)
         image_vision = vision.Image(content=content)
         response = client.web_detection(image=image_vision)
-        annotations = response.web_detection
-
-        draw = ImageDraw.Draw(image)
-        font = ImageFont.load_default()
+        web_detection = response.web_detection
 
         result = "網頁辨識結果：<br>"
-        if annotations.pages_with_matching_images:
-            result += "匹配的網頁：<br>"
-            for page in annotations.pages_with_matching_images:
-                result += f"{page.url}<br>"
-                logging.info(f"匹配的網頁：{page.url}")
+        if web_detection.web_entities:
+            result += "網頁實體：<br>"
+            for entity in web_detection.web_entities:
+                result += f"{entity.description}: {entity.score*100:.2f}%<br>"
+                logging.info(f"實體：{entity.description}，信心度：{entity.score*100:.2f}%")
+
+        if web_detection.full_matching_images:
+            result += "<br>完全匹配的圖片：<br>"
+            for image in web_detection.full_matching_images:
+                result += f"URL: {image.url}<br>"
 
         return result, image
 
@@ -271,10 +269,9 @@ def object_detection(image):
         for object_ in objects:
             result += f"{object_.name}: {object_.score*100:.2f}%<br>"
             logging.info(f"物體：{object_.name}，信心度：{object_.score*100:.2f}%")
-
             box = [(vertex.x * image.width, vertex.y * image.height) for vertex in object_.bounding_poly.normalized_vertices]
-            draw.polygon(box, outline='red')
-            draw.text(box[0], object_.name, fill='red', font=font)
+            draw.polygon(box, outline="red")
+            draw.text(box[0], object_.name, fill="red", font=font)
 
         return result, image
 
@@ -305,6 +302,9 @@ def ocr_detection(image):
         for text in texts:
             result += f"{text.description}<br>"
             logging.info(f"OCR文字：{text.description}")
+            box = [(vertex.x, vertex.y) for vertex in text.bounding_poly.vertices]
+            draw.polygon(box, outline="red")
+            draw.text((box[0][0], box[0][1] - 10), text.description, fill="red", font=font)
 
         return result, image
 
@@ -335,6 +335,9 @@ def logo_detection(image):
         for logo in logos:
             result += f"{logo.description}: {logo.score*100:.2f}%<br>"
             logging.info(f"Logo：{logo.description}，信心度：{logo.score*100:.2f}%")
+            box = [(vertex.x, vertex.y) for vertex in logo.bounding_poly.vertices]
+            draw.polygon(box, outline="red")
+            draw.text((box[0][0], box[0][1] - 10), logo.description, fill="red", font=font)
 
         return result, image
 
@@ -356,17 +359,13 @@ def explicit_content_detection(image):
         content = get_image_content(image)
         image_vision = vision.Image(content=content)
         response = client.safe_search_detection(image=image_vision)
-        safe = response.safe_search_annotation
-
-        draw = ImageDraw.Draw(image)
-        font = ImageFont.load_default()
+        safe_search = response.safe_search_annotation
 
         result = "不當內容辨識結果：<br>"
-        result += f"成人內容：{safe.adult}<br>"
-        result += f"暴力內容：{safe.violence}<br>"
-        result += f"醫療內容：{safe.medical}<br>"
-        result += f"情色內容：{safe.racy}<br>"
-        logging.info(f"不當內容：成人-{safe.adult}, 暴力-{safe.violence}, 醫療-{safe.medical}, 情色-{safe.racy}")
+        result += f"成人內容：{safe_search.adult}<br>"
+        result += f"醫學內容：{safe_search.medical}<br>"
+        result += f"暴力內容：{safe_search.violence}<br>"
+        result += f"令人反感的內容：{safe_search.racy}<br>"
 
         return result, image
 
@@ -374,55 +373,25 @@ def explicit_content_detection(image):
         logging.error(f"不當內容辨識失敗：{str(e)}")
         return f"不當內容辨識失敗：{str(e)}", image
 
-def generate_gpt_description(result, use_gpt4=False):
+def generate_gpt_description(result, is_subscriber):
+    model = "gpt-4" if is_subscriber else "gpt-3.5-turbo"
+    logging.info(f"正在使用{model}生成描述")
     try:
-        if use_gpt4:
-            model = "gpt-4o"
-            messages = [
-                {"role": "system", "content": "你是專業圖片描述生成助手,以繁體中文回答,請確實地描述圖片狀況,不要用記錄呈現的文字回答"},
-                {"role": "user", "content": f"根據以下辨識結果生成一段描述：{result}"}
-            ]
-        else:
-            model = "gpt-3.5-turbo"
-            messages = [
-                {"role": "system", "content": "你是專業圖片描述生成助手，以繁體中文回答，並且作簡短回覆就好，不要用記錄呈現的文字回答"},
-                {"role": "user", "content": f"根據以下辨識結果生成一段描述：{result}"}
-            ]
-        
-        logging.info(f"使用模型 {model} 生成描述")
-        
         response = openai.ChatCompletion.create(
             model=model,
-            messages=messages,
-            max_tokens=200
+            messages=[
+                {"role": "system", "content": "你是一個專業的圖像辨識結果描述生成助手"},
+                {"role": "user", "content": f"請根據以下圖像辨識結果生成一段描述：{result}"}
+            ],
+            temperature=0.7,
         )
-        return response.choices[0].message['content']
+        description = response['choices'][0]['message']['content']
+        return description
     except Exception as e:
-        logging.error(f"生成描述錯誤: {str(e)}")
-        return f"生成描述失敗: {str(e)}"
-    
-def load_users():
-    try:
-        with open(USER_DATA_FILE, 'r') as file:
-            st.session_state.users = json.load(file)
-    except FileNotFoundError:
-        st.session_state.users = {}
-
-def save_users():
-    with open(USER_DATA_FILE, 'w') as file:
-        json.dump(st.session_state.users, file)
-
-def get_image_content(image):
-    with io.BytesIO() as output:
-        image.save(output, format="JPEG")
-        content = output.getvalue()
-    return content
+        logging.error(f"生成描述失敗：{str(e)}")
+        return f"生成描述失敗：{str(e)}"
 
 def show_payment_page():
-    if st.session_state.get('subscription_status'):
-        show_success_page()
-        return
-    
     st.title("訂閱付款")
     st.write("請選擇訂閱計劃並完成付款以獲得無限次使用次數。")
     
@@ -432,35 +401,33 @@ def show_payment_page():
         card_expiry = st.text_input("到期日 (MM/YY)")
         card_cvc = st.text_input("CVC")
         
-        submit_payment = st.form_submit_button("付款")
-        cancel_payment = st.form_submit_button("取消付款")
-
-        if submit_payment:
+        if st.form_submit_button("付款"):
             if card_number and card_expiry and card_cvc:
                 st.session_state.subscription_status = True
                 st.session_state.users[st.session_state.current_user]['subscription_status'] = True
                 save_users()
-                st.session_state.show_success_page = True
+                st.success("訂閱成功！請繼續體驗圖片辨識功能!")
+                st.session_state.show_payment_page = False
                 st.experimental_rerun()
             else:
                 st.error("請填寫所有信用卡信息")
         
-        if cancel_payment:
+        if st.form_submit_button("取消付款"):
             st.session_state.show_payment_page = False
             st.experimental_rerun()
 
-def show_success_page():
-    st.title("訂閱成功")
-    st.write("訂閱成功！請繼續體驗無限制的辨識功能與更強大的模型功能!")
+def save_users():
+    with open(USER_DATA_FILE, 'w') as f:
+        json.dump(st.session_state.users, f)
 
-    # 顯示返回鍵
-    if st.button('返回辨識功能'):
-        st.query_params.update(page="recognition")
-        st.experimental_rerun()
+def load_users():
+    try:
+        with open(USER_DATA_FILE, 'r') as f:
+            st.session_state.users = json.load(f)
+    except FileNotFoundError:
+        st.session_state.users = {}
 
-def show_recognition_page():
-    st.title("圖片辨識")
-    st.write("歡迎使用圖片辨識功能")
-    
+
+
 if __name__ == "__main__":
     main()
