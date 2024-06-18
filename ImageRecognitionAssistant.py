@@ -4,18 +4,18 @@ from google.oauth2 import service_account
 from PIL import Image, ImageDraw, ImageFont
 import io
 import json
-from openai import OpenAI
+import openai
 import requests
 import base64
 import logging
 from datetime import datetime
 import os
-import openai
+
 # Set up logging
 logging.basicConfig(level=logging.INFO)
 
+# Initialize OpenAI API key
 openai.api_key = os.getenv("OPENAI_API_KEY")
-client = OpenAI()
 
 # Initialize session state
 if 'history' not in st.session_state:
@@ -414,17 +414,18 @@ def show_payment_page():
     st.write("請選擇訂閱計劃並完成付款以獲得無限次使用次數。")
     
     with st.form("payment_form"):
-        st.write("請輸入信用卡信息以完成付款，買斷制價錢$500台幣：")
+        st.write("請輸入信用卡信息以完成付款，買斷制價格500台幣：")
         card_number = st.text_input("信用卡號碼")
         card_expiry = st.text_input("到期日 (MM/YY)")
         card_cvc = st.text_input("CVC")
         
         if st.form_submit_button("付款"):
             if card_number and card_expiry and card_cvc:
+                # 模擬支付過程
                 st.session_state.subscription_status = True
                 st.session_state.users[st.session_state.current_user]['subscription_status'] = True
                 save_users()
-                st.success("訂閱成功！請享受無限制辨識次數與更高階的模型說明!")
+                st.success("訂閱成功！請繼續體驗圖片辨識功能!")
                 st.session_state.show_payment_page = False
                 st.experimental_rerun()
             else:
