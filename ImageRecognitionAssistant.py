@@ -373,23 +373,32 @@ def explicit_content_detection(image):
         logging.error(f"不當內容辨識失敗：{str(e)}")
         return f"不當內容辨識失敗：{str(e)}", image
 
-def generate_gpt_description(result, is_subscriber):
-    model = "gpt-4" if is_subscriber else "gpt-3.5-turbo"
-    logging.info(f"正在使用{model}生成描述")
+def generate_gpt_description(result, use_gpt4=False):
     try:
+        if use_gpt4:
+            model = "gpt-4o"
+            messages = [
+                {"role": "system", "content": "你是專業圖片描述生成助手,以繁體中文回答,請確實地描述圖片狀況,不要用記錄呈現的文字回答"},
+                {"role": "user", "content": f"根據以下辨識結果生成一段描述：{result}"}
+            ]
+        else:
+            model = "gpt-3.5-turbo"
+            messages = [
+                {"role": "system", "content": "你是專業圖片描述生成助手，以繁體中文回答，並且作簡短回覆就好，不要用記錄呈現的文字回答"},
+                {"role": "user", "content": f"根據以下辨識結果生成一段描述：{result}"}
+            ]
+        
+        logging.info(f"使用模型 {model} 生成描述")
+        
         response = openai.ChatCompletion.create(
             model=model,
-            messages=[
-                {"role": "system", "content": "你是一個專業的圖像辨識結果描述生成助手"},
-                {"role": "user", "content": f"請根據以下圖像辨識結果生成一段描述：{result}"}
-            ],
-            temperature=0.7,
+            messages=messages,
+            max_tokens=200
         )
-        description = response['choices'][0]['message']['content']
-        return description
+        return response.choices[0].message['content']
     except Exception as e:
-        logging.error(f"生成描述失敗：{str(e)}")
-        return f"生成描述失敗：{str(e)}"
+        logging.error(f"生成描述錯誤: {str(e)}")
+        return f"生成描述失敗: {str(e)}"
 
 def show_payment_page():
     st.title("訂閱付款")
