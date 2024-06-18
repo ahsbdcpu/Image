@@ -386,9 +386,7 @@ def generate_gpt_description(result, use_gpt4=False):
             messages=messages,
             max_tokens=200
         )
-        
-        # Extracting the content from the response
-        return response.choices[0].message["content"]
+        return response['choices'][0]['message']['content']
     except Exception as e:
         logging.error(f"生成描述錯誤: {str(e)}")
         return f"生成描述失敗: {str(e)}"
