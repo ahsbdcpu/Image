@@ -428,11 +428,6 @@ def show_payment_page():
             st.session_state.show_payment_page = False
             st.experimental_rerun()
 
-
-def save_users():
-    with open(USER_DATA_FILE, 'w') as f:
-        json.dump(st.session_state.users, f)
-
 def load_users():
     try:
         with open(USER_DATA_FILE, 'r') as f:
@@ -440,7 +435,9 @@ def load_users():
     except FileNotFoundError:
         st.session_state.users = {}
 
-
+def save_users():
+    with open(USER_DATA_FILE, 'w') as f:
+        json.dump(st.session_state.users, f, ensure_ascii=False, indent=4)
 
 if __name__ == "__main__":
     main()
