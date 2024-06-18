@@ -16,7 +16,6 @@ logging.basicConfig(level=logging.INFO)
 
 # Initialize OpenAI API key
 openai.api_key = os.getenv("OPENAI_API_KEY")
-openai.api_base = ''
 
 # Initialize session state
 if 'history' not in st.session_state:
@@ -428,7 +427,10 @@ def show_payment_page():
         card_expiry = st.text_input("到期日 (MM/YY)")
         card_cvc = st.text_input("CVC")
         
-        if st.form_submit_button("付款"):
+        submit_payment = st.form_submit_button("付款")
+        cancel_payment = st.form_submit_button("取消付款")
+
+        if submit_payment:
             if card_number and card_expiry and card_cvc:
                 st.session_state.subscription_status = True
                 st.session_state.users[st.session_state.current_user]['subscription_status'] = True
