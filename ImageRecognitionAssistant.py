@@ -418,6 +418,7 @@ def show_payment_page():
                 st.session_state.users[st.session_state.current_user]['subscription_status'] = True
                 save_users()
                 st.success("訂閱成功！請繼續體驗圖片辨識功能!")
+                st.balloons()  # Show balloons effect
                 st.session_state.show_payment_page = False
                 st.experimental_rerun()
             else:
@@ -426,6 +427,7 @@ def show_payment_page():
         if st.form_submit_button("取消付款"):
             st.session_state.show_payment_page = False
             st.experimental_rerun()
+
 
 def save_users():
     with open(USER_DATA_FILE, 'w') as f:
