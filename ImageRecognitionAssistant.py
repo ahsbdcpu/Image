@@ -457,7 +457,8 @@ def show_success_page():
     
     # 顯示返回鍵
     if st.button('返回辨識功能'):
-        st.experimental_set_query_params(page="recognition")
+        st.query_params.update(page="recognition")
+        st.experimental_rerun()
 
 def show_recognition_page():
     st.title("圖片辨識")
