@@ -4,17 +4,18 @@ from google.oauth2 import service_account
 from PIL import Image, ImageDraw, ImageFont
 import io
 import json
-import openai
+from openai import OpenAI
 import requests
 import base64
 import logging
 from datetime import datetime
 import os
+import openai
 
 # Set up logging
 logging.basicConfig(level=logging.INFO)
 
-# Initialize OpenAI API key
+client = OpenAI()
 openai.api_key = os.getenv("OPENAI_API_KEY")
 
 # Initialize session state
