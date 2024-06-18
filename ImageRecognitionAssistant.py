@@ -455,8 +455,9 @@ def show_success_page():
     # 暫停3秒鐘
     time.sleep(3)
     
-    # 使用st.experimental_set_query_params來改變URL參數以實現跳轉
-    st.experimental_set_query_params(page="recognition")
+    # 顯示返回鍵
+    if st.button('返回辨識功能'):
+        st.experimental_set_query_params(page="recognition")
 
 def show_recognition_page():
     st.title("圖片辨識")
