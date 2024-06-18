@@ -363,7 +363,7 @@ def explicit_content_detection(image):
 
         result = "不當內容辨識結果：<br>"
         result += f"成人內容：{safe_search.adult}<br>"
-        result += f"醫學內容：{safe_search.medical}<br>"
+        result += f"情色內容：{safe_search.medical}<br>"
         result += f"暴力內容：{safe_search.violence}<br>"
         result += f"令人反感的內容：{safe_search.racy}<br>"
 
