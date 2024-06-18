@@ -69,7 +69,6 @@ def show_main_page():
     st.sidebar.title("當前使用模型")
     current_model = "GPT-4o" if st.session_state.subscription_status else "GPT-3.5"
     st.sidebar.write(f"目前使用的模型是：{current_model}")
-    st.sidebar.image("chat_gpt_icon.png", use_column_width=True)
 
     st.sidebar.title("辨識歷史記錄")
     if st.session_state.history:
