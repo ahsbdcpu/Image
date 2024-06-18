@@ -3,6 +3,7 @@ from google.cloud import vision
 from google.oauth2 import service_account
 from PIL import Image, ImageDraw, ImageFont
 import io
+import time
 import json
 import openai
 import requests
@@ -439,7 +440,7 @@ def show_payment_page():
                 st.session_state.subscription_status = True
                 st.session_state.users[st.session_state.current_user]['subscription_status'] = True
                 save_users()
-                st.experimental_rerun()  # 重新加載頁面以顯示成功頁面
+                show_success_page()
             else:
                 st.error("請填寫所有信用卡信息")
         
@@ -451,14 +452,15 @@ def show_success_page():
     st.title("訂閱成功")
     st.write("訂閱成功！請繼續體驗無限制的辨識功能與更強大的模型功能!")
     
-    # 插入JavaScript來實現3秒後自動跳轉
-    st.markdown("""
-        <script>
-        setTimeout(function() {
-            window.location.href = "/recognition";
-        }, 3000);
-        </script>
-    """, unsafe_allow_html=True)
+    # 暫停3秒鐘
+    time.sleep(3)
+    
+    # 使用st.experimental_set_query_params來改變URL參數以實現跳轉
+    st.experimental_set_query_params(page="recognition")
+
+def show_recognition_page():
+    st.title("圖片辨識")
+    st.write("歡迎使用圖片辨識功能")
     
 if __name__ == "__main__":
     main()
