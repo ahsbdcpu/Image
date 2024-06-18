@@ -386,12 +386,13 @@ def generate_gpt_description(result, use_gpt4=False):
             messages=messages,
             max_tokens=200
         )
-        return response['choices'][0]['message']['content']
+        
+        # Extracting the content from the response
+        return response.choices[0].message["content"]
     except Exception as e:
         logging.error(f"生成描述錯誤: {str(e)}")
         return f"生成描述失敗: {str(e)}"
 
-    
 def load_users():
     try:
         with open(USER_DATA_FILE, 'r') as file:
@@ -421,7 +422,6 @@ def show_payment_page():
         
         if st.form_submit_button("付款"):
             if card_number and card_expiry and card_cvc:
-                # 模擬支付過程
                 st.session_state.subscription_status = True
                 st.session_state.users[st.session_state.current_user]['subscription_status'] = True
                 save_users()
