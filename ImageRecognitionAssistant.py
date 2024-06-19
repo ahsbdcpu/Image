@@ -110,7 +110,7 @@ def show_main_page():
         st.write("")
 
         # Select detection type
-        detection_type = st.selectbox("選擇辨識類型", ["標籤辨識", "網頁辨識", "物體辨識", "OCR文字辨識", "Logo辨識", "不當內容辨識"], key="detection_type")
+        detection_type = st.selectbox("選擇辨識類型", ["標籤辨識", "網頁辨識","OCR文字辨識", "Logo辨識", "不當內容辨識"], key="detection_type")
 
         # Generate response
         if st.button("辨識圖片", key="detect_image"):
@@ -119,8 +119,6 @@ def show_main_page():
                     result, image_with_result = label_detection(image)
                 elif detection_type == "網頁辨識":
                     result, image_with_result = web_detection(image)
-                elif detection_type == "物體辨識":
-                    result, image_with_result = object_detection(image)
                 elif detection_type == "OCR文字辨識":
                     result, image_with_result = ocr_detection(image)
                 elif detection_type == "Logo辨識":
@@ -243,40 +241,6 @@ def web_detection(image):
     except Exception as e:
         logging.error(f"網頁辨識失敗：{str(e)}")
         return f"網頁辨識失敗：{str(e)}", image
-
-def object_detection(image):
-    try:
-        def get_image_content(image):
-            buffered = io.BytesIO()
-            image.save(buffered, format="JPEG")
-            content = buffered.getvalue()
-            return content
-
-        logging.info("開始物體辨識")
-        credentials = service_account.Credentials.from_service_account_file(SERVICE_ACCOUNT_FILE)
-        client = vision.ImageAnnotatorClient(credentials=credentials)
-        content = get_image_content(image)
-        image_vision = vision.Image(content=content)
-        response = client.object_localization(image=image_vision)
-        objects = response.localized_object_annotations
-
-        draw = ImageDraw.Draw(image)
-        font = ImageFont.load_default()
-
-        result = "物體辨識結果：<br>"
-        for object_ in objects:
-            result += f"{object_.name}: {object_.score*100:.2f}%<br>"
-            logging.info(f"物體：{object_.name}，信心度：{object_.score*100:.2f}%")
-
-            box = [(vertex.x * image.width, vertex.y * image.height) for vertex in object_.bounding_poly.normalized_vertices]
-            draw.polygon(box, outline='red')
-            draw.text(box[0], object_.name, fill='red', font=font)
-
-        return result, image
-
-    except Exception as e:
-        logging.error(f"物體辨識失敗：{str(e)}")
-        return f"物體辨識失敗：{str(e)}", image
 
 def ocr_detection(image):
     try:
