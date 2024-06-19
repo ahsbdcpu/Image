@@ -370,7 +370,7 @@ def show_payment_page():
     st.write("請選擇訂閱計劃並完成付款以獲得無限次使用次數。")
     
     with st.form("payment_form"):
-        st.write("請輸入信用卡信息以完成付款，買斷制價格500台幣：")
+        st.write("請輸入信用卡信息以完成付款，一個月價格100台幣：")
         card_number = st.text_input("信用卡號碼")
         card_expiry = st.text_input("到期日 (MM/YY)")
         card_cvc = st.text_input("CVC")
